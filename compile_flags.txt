@@ -1,0 +1,3 @@
+clang
+-Iinclude
+-std=c99
