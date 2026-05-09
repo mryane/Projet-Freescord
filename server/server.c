@@ -74,7 +74,7 @@ void srv_tick(srv_handle handle)
 	{
 		list_add(srv->userList, newUser);
 	}
-	pthread_mutex_lock(&srv->userListMutex);
+	pthread_mutex_unlock(&srv->userListMutex);
 
 	pthread_t userThread;
 
