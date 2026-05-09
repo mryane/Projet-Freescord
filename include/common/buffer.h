@@ -39,6 +39,9 @@ typedef struct buffer buffer;
  * associées au fichier fd */
 buffer *buff_create(int fd, size_t buffsz);
 
+/** Libérer le buffer buff et toute la mémoire associée. */
+void buff_free(buffer *buff);
+
 /** Retourner le prochain caractère à lire ou EOF (-1) si la fin
  * du fichier est atteinte.
  *
@@ -50,9 +53,6 @@ int buff_getc(buffer *b);
  * Le résultat n'est garanti que pour un seul caractère.
  * retourne le caractère c. */
 int buff_ungetc(buffer *b, int c);
-
-/** Libérer le buffer buff et toute la mémoire associée. */
-void buff_free(buffer *buff);
 
 /** Retourner 1 si la lecture a atteint la fin du fichier, 0 sinon */
 int buff_eof(const buffer *buff);

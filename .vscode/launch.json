@@ -12,6 +12,25 @@
             "args": [],
             "env": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb-dap",
+            "request": "launch",
+            "name": "Server",
+            "program": "${workspaceFolder}/build/Server.elf",
+            "args": [],
+            "env": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb-dap",
+            "request": "launch",
+            "name": "Test",
+            "program": "${workspaceFolder}/build/Test.elf",
+            "console": "integratedTerminal",
+            "args": [],
+            "env": [],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

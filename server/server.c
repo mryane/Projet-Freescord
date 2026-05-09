@@ -63,7 +63,7 @@ void srv_tick(srv_handle handle)
 {
 	SRV_FROM_HANDLE()
 
-	user *newUser = user_accept(srv->socketHandle, srv->pipeHandles[0]);
+	user *newUser = user_accept(srv->socketHandle, srv->pipeHandles[1]);
 
 	if (newUser == NULL)
 	{
