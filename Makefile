@@ -7,14 +7,14 @@ export INCLUDE_DIR := include
 export COMMON_SRC_DIR := common
 
 all:
-	$(MAKE) -f server/MakeServer.mk srv --no-print-directory
-	$(MAKE) -f client/MakeClient.mk client --no-print-directory
+	@$(MAKE) -f server/MakeServer.mk srv --no-print-directory
+	@$(MAKE) -f client/MakeClient.mk client --no-print-directory
 
 srv:
-	$(MAKE) -f server/MakeServer.mk srv --no-print-directory
+	@$(MAKE) -f server/MakeServer.mk srv --no-print-directory
 
 client:
-	$(MAKE) -f client/MakeClient.mk client --no-print-directory
+	@$(MAKE) -f client/MakeClient.mk client --no-print-directory
 
 clean:
 	@echo Cleaning...
