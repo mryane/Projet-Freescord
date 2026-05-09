@@ -1,5 +1,6 @@
 #include "common/list.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -152,16 +153,36 @@ void list_print(const struct list *l, void (*pri_fct)(const void *))
 	printf("]");
 }
 
-void *list_get(const struct list *l, size_t i)
+struct node *list_get_node(const struct list *l, size_t i)
 {
 	if (i >= l->length)
-		error(1, 0, "list_get: index %zu out of bound %zu\n",
-			i, l->length - 1);
+	{
+		error(
+			1,
+			0,
+			"list_get_node: index %zu out of bound %zu\n", i, l->length - 1);
+	}
+
 	struct node *curr = l->first;
-	while (i > 0) {
+
+	while (i > 0)
+	{
 		curr = curr->next;
 		i--;
 	}
+
+	return curr;
+}
+
+struct node *list_get_next_node(const struct node *curr)
+{
+	return curr->next;
+}
+
+void *list_get(const struct list *l, size_t i)
+{
+	struct node *curr = list_get_node(l, i);
+
 	return curr->elt;
 }
 

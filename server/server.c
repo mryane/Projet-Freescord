@@ -1,7 +1,9 @@
 #include "server/Log.h"
 #include "server/server.h"
 #include "server/user.h"
+
 #include "common/commonDef.h"
+#include "common/list.h"
 
 #include <bits/pthreadtypes.h>
 #include <stdbool.h>
@@ -21,10 +23,15 @@ void *handle_client(void *user);
  * retourne le descripteur de cette socket, ou -1 en cas d'erreur */
 int create_listening_sock(uint16_t port);
 
+void* srv_repeat(srv_handle handle);
+
 typedef struct
 {
 	int socketHandle;
-	int numClients;
+	int pipeHandles[2];
+	pthread_t repeatThread;
+	pthread_mutex_t userListMutex;
+	struct list *userList;
 } server;
 
 srv_handle srv_alloc()
@@ -37,35 +44,75 @@ bool srv_init(srv_handle handle)
 	SRV_FROM_HANDLE()
 
 	srv->socketHandle = create_listening_sock(SRV_PORT);
-	srv->numClients = 0;
+	srv->userList = list_create();
 
-	if (srv->socketHandle == -1)
+	if (srv->socketHandle == -1 || pipe(srv->pipeHandles))
 	{
 		SRV_LOG("L'initialisation du serveur a échoué.")
-	}
-	else
-	{
-		SRV_LOG("Initialisation terminé, écoute sur le port %u.", SRV_PORT)
+		return false;
 	}
 
-	return srv->socketHandle != -1;
+	pthread_mutex_init(&srv->userListMutex, NULL);
+	pthread_create(&srv->repeatThread, NULL, srv_repeat, srv);
+
+	SRV_LOG("Initialisation terminé, écoute sur le port %u.", SRV_PORT)
+	return true;
 }
 
 void srv_tick(srv_handle handle)
 {
 	SRV_FROM_HANDLE()
 
-	user *newUser = user_accept(srv->socketHandle);
+	user *newUser = user_accept(srv->socketHandle, srv->pipeHandles[0]);
 
 	if (newUser == NULL)
 	{
 		return;
 	}
 
+	pthread_mutex_lock(&srv->userListMutex);
+	{
+		list_add(srv->userList, newUser);
+	}
+	pthread_mutex_lock(&srv->userListMutex);
+
 	pthread_t userThread;
 
 	pthread_create(&userThread, NULL, handle_client, newUser);
 	pthread_detach(userThread);
+}
+
+void* srv_repeat(srv_handle handle)
+{
+	SRV_FROM_HANDLE()
+
+	int i;
+	int numReadedBytes;
+	char readBuffer[1024];
+
+	while (true)
+	{
+		numReadedBytes = read(srv->pipeHandles[0], readBuffer, sizeof(readBuffer));
+
+		if (numReadedBytes == -1)
+		{
+			break;
+		}
+
+		pthread_mutex_lock(&srv->userListMutex);
+		{
+			struct node *currentNode = list_get_node(srv->userList, 0);
+
+			while (currentNode != NULL)
+			{
+				send(((user*) currentNode->elt)->socketHandle, readBuffer, numReadedBytes, 0);
+				currentNode = list_get_next_node(currentNode);
+			}
+		}
+		pthread_mutex_unlock(&srv->userListMutex);
+	}
+
+	return NULL;
 }
 
 void srv_close(srv_handle handle)
@@ -76,6 +123,14 @@ void srv_close(srv_handle handle)
 	{
 		close(srv->socketHandle);
 	}
+
+	close(srv->pipeHandles[0]);
+	close(srv->pipeHandles[1]);
+
+	pthread_join(srv->repeatThread, NULL);
+	pthread_mutex_destroy(&srv->userListMutex);
+
+	list_free(srv->userList, (void (*)(void*)) user_close);
 }
 
 void *handle_client(void *clt)

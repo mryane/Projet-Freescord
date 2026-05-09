@@ -1,6 +1,8 @@
 #include "server/user.h"
 #include "server/Log.h"
+#include "server/server.h"
 
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -8,7 +10,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-user *user_accept(int serverSocketHandle)
+user *user_accept(int serverSocketHandle, int writePipeHandle)
 {
     user *newUser;
     user tmpUser;
@@ -34,14 +36,14 @@ user *user_accept(int serverSocketHandle)
 
 void user_handle(user *u)
 {
-    char *newClientIp = (char*) &u->addr.ipv4Addr.sin_addr.s_addr;
+    int newClientIp = ntohl(u->addr.ipv4Addr.sin_addr.s_addr);
 	char receiveBuffer[64];
 
 	SRV_LOG("Nouveau client ! Addresse: %d.%d.%d.%d",
-		newClientIp[0],
-		newClientIp[1],
-		newClientIp[2],
-		newClientIp[3])
+		(newClientIp >> 24) & 0xFF,
+		(newClientIp >> 16) & 0xFF,
+		(newClientIp >> 8) & 0xFF,
+		(newClientIp) & 0xFF)
 
 	while (true)
 	{
@@ -52,6 +54,8 @@ void user_handle(user *u)
 			break;
 		}
 
+		
+
 		send(u->socketHandle, receiveBuffer, numReceivedBytes, 0);
 	}
 
@@ -59,12 +63,16 @@ void user_handle(user *u)
 	SRV_LOG("Connection avec le client fermé.")
 }
 
-void user_free(user *u)
+void user_close(user *u)
 {
     if (u->socketHandle != -1)
     {
         close(u->socketHandle);
     }
+}
 
+void user_free(user *u)
+{
+    user_close(u);
     free(u);
 }

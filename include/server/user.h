@@ -18,8 +18,9 @@ typedef struct
 	} addr;
 } user;
 
-user *user_accept(int serverSocketHandle);
+user *user_accept(int serverSocketHandle, int writePipeHandle);
 void user_handle(user *u);
+void user_close(user *u);
 void user_free(user*);
 
 #endif /* ifndef USER_H */

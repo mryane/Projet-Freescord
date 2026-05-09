@@ -108,6 +108,12 @@ struct list *list_add_index(struct list *l, void *elt, size_t i);
  * are printed with the function pri_fct */
 void list_print(const struct list *l, void (*pri_fct)(const void *));
 
+/** return the i-th node of list l, with 0 <= i < length(l) */
+struct node *list_get_node(const struct list *l, size_t i);
+
+/** return the next node of curr */
+struct node *list_get_next_node(const struct node *curr);
+
 /** return the i-th element of list l, with 0 <= i < length(l) */
 void *list_get(const struct list *l, size_t i);
 
