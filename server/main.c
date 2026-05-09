@@ -1,22 +1,23 @@
-#include "server/Server.h"
+#include "server/server.h"
 
 #include <stdlib.h>
 
-SRVHandle gServer = SRV_NULL_HANDLE;
+srv_handle gServer = SRV_NULL_HANDLE;
 
 int main(int numArgs, const char **args)
 {
-    gServer = SRVAlloc();
-    if (!SRVInit(gServer))
+    gServer = srv_alloc();
+    
+    if (!srv_init(gServer))
     {
         return EXIT_FAILURE;
     }
 
     while (true)
     {
-        SRVTick(gServer);
+        srv_tick(gServer);
     }
 
-    SRVClose(gServer);
+    srv_close(gServer);
 	return EXIT_SUCCESS;
 }

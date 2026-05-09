@@ -1,36 +1,31 @@
-#include "client/Client.h"
+#include "client/client.h"
 #include "client/Log.h"
-#include "CommonDef.h"
+#include "common/commonDef.h"
 
-#include <errno.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 
-#include <netinet/in.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <sys/socket.h>
-#include <fcntl.h>
-#include <pthread.h>
 #include <arpa/inet.h>
-#include <poll.h>
+#include <unistd.h>
 
-#define CLT_FROM_HANDLE() Client* clt = (Client*) handle;
+#define CLT_FROM_HANDLE() client* clt = (client*) handle;
 
 typedef struct
 {
     int socketHandle;
     int clientId;
-} Client;
+} client;
 
 /** se connecter au serveur TCP d'adresse donnée en argument sous forme de
  * chaîne de caractère et au port donné en argument
  * retourne le descripteur de fichier de la socket obtenue ou -1 en cas
  * d'erreur. */
-int connect_serveur_tcp(char *adresse, uint16_t port);
+int connect_server_tcp(char *adresse, uint16_t port);
 
-bool CLTTryParseIPv4Address(const char *stringAddr, unsigned int *outAddr)
+bool clt_try_parse_ipv4_address(const char *stringAddr, unsigned int *outAddr)
 {
 	unsigned int splitAddr[4];
 
@@ -53,17 +48,17 @@ bool CLTTryParseIPv4Address(const char *stringAddr, unsigned int *outAddr)
 	return true;
 }
 
-CLTHandle CLTAlloc()
+clt_handle clt_alloc()
 {
-	return malloc(sizeof(Client));
+	return malloc(sizeof(client));
 }
 
-bool CLTInit(CLTHandle handle)
+bool clt_init(clt_handle handle)
 {
 	CLT_FROM_HANDLE()
 
 	clt->clientId = -1;
-	clt->socketHandle = connect_serveur_tcp("127.0.0.1", SRV_PORT);
+	clt->socketHandle = connect_server_tcp("127.0.0.1", SRV_PORT);
 
 	if (clt->socketHandle == -1)
 	{
@@ -75,7 +70,7 @@ bool CLTInit(CLTHandle handle)
 	return true;
 }
 
-bool CLTTick(CLTHandle handle)
+void clt_tick(clt_handle handle)
 {
 	CLT_FROM_HANDLE()
 
@@ -89,7 +84,7 @@ bool CLTTick(CLTHandle handle)
 	CLT_LOG("Message reçu du serveur: %s", receiveMsg)
 }
 
-void CLTClose(CLTHandle handle)
+void clt_close(clt_handle handle)
 {
 	CLT_FROM_HANDLE()
 
@@ -97,13 +92,13 @@ void CLTClose(CLTHandle handle)
 	close(clt->socketHandle);
 }
 
-int connect_serveur_tcp(char *address, uint16_t port)
+int connect_server_tcp(char *address, uint16_t port)
 {
 	int clientSocketHandle;
 	unsigned int serverIp;
 	struct sockaddr_in serverSocketAddr;
 
-	if (!CLTTryParseIPv4Address(address, &serverIp))
+	if (!clt_try_parse_ipv4_address(address, &serverIp))
 	{
 		CLT_LOG("Impossible de lire l'IP donnée.")
 		return -1;
@@ -119,13 +114,13 @@ int connect_serveur_tcp(char *address, uint16_t port)
 
 	if (clientSocketHandle == -1)
 	{
-		CLT_LOG("Erreur lors de la création du socket client. Code: %d", errno)
+		CLT_LOG_ERROR("Erreur lors de la création du socket client.")
 		return -1;
 	}
 
 	if (connect(clientSocketHandle, (struct sockaddr*) &serverSocketAddr, sizeof(struct sockaddr_in)))
 	{
-		CLT_LOG("Erreur lors de la connection au serveur. Code: %d", errno)
+		CLT_LOG_ERROR("Erreur lors de la connection au serveur")
 		return -1;
 	}
 

@@ -1,8 +1,6 @@
-#include "buffer.h"
+#include "common/buffer.h"
 
-#include <fcntl.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 
 struct buffer {

@@ -1,4 +1,5 @@
-#include <string.h>
+#include "common/utils.h"
+
 char *crlf_to_lf(char *line_with_crlf)
 {
 	/* pour éviter les warnings de variable non utilisée */

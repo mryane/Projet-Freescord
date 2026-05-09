@@ -1,22 +1,22 @@
-#include "client/Client.h"
+#include "client/client.h"
 
 #include <stdlib.h>
 
-CLTHandle gClient;
+clt_handle gClient;
 
 int main(int numArgs, const char **args)
 {
-    gClient = CLTAlloc();
-    if (!CLTInit(gClient))
+    gClient = clt_alloc();
+    if (!clt_init(gClient))
     {
         return EXIT_FAILURE;
     }
 
     for (int i = 0; i < 3; i++)
     {
-        CLTTick(gClient);
+        clt_tick(gClient);
     }
 
-    CLTClose(gClient);
+    clt_close(gClient);
 	return EXIT_SUCCESS;
 }
