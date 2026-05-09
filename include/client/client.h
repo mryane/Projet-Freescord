@@ -9,4 +9,4 @@ clt_handle clt_alloc();
 bool clt_init(clt_handle);
 void clt_close(clt_handle);
 
-void clt_tick(clt_handle);
+bool clt_tick(clt_handle);

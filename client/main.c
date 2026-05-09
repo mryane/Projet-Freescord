@@ -7,14 +7,17 @@ clt_handle gClient;
 int main(int numArgs, const char **args)
 {
     gClient = clt_alloc();
-    if (!clt_init(gClient))
+    if (! clt_init(gClient))
     {
         return EXIT_FAILURE;
     }
 
-    for (int i = 0; i < 3; i++)
+    while (true)
     {
-        clt_tick(gClient);
+        if (!clt_tick(gClient))
+        {
+            break;
+        }
     }
 
     clt_close(gClient);

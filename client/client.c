@@ -2,14 +2,17 @@
 #include "client/Log.h"
 #include "common/commonDef.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 
+#include <sys/poll.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <poll.h>
 
 #define CLT_FROM_HANDLE() client* clt = (client*) handle;
 
@@ -58,7 +61,7 @@ bool clt_init(clt_handle handle)
 	CLT_FROM_HANDLE()
 
 	clt->clientId = -1;
-	clt->socketHandle = connect_server_tcp("127.0.0.1", SRV_PORT);
+	clt->socketHandle = connect_server_tcp("192.168.1.180", SRV_PORT);
 
 	if (clt->socketHandle == -1)
 	{
@@ -70,18 +73,59 @@ bool clt_init(clt_handle handle)
 	return true;
 }
 
-void clt_tick(clt_handle handle)
+bool clt_tick(clt_handle handle)
 {
 	CLT_FROM_HANDLE()
 
-	char sendMsg[32];
-	char receiveMsg[32];
+	struct pollfd pollFd[2] =
+	{
+		{
+			.fd = STDIN_FILENO,
+			.events = POLLIN,
+			.revents = 0
+		},
+		{
+			.fd = clt->socketHandle,
+			.events = POLLIN,
+			.revents = 0
+		}
+	};
 
-	strcpy(sendMsg, "Hello, I'm the Client !");
-	write(clt->socketHandle, sendMsg, 32);
-	read(clt->socketHandle, receiveMsg, 32);
+	char data[512];
+	int dataSize;
+	int pollResult = poll(pollFd, 2, 50);
+	int i;
 
-	CLT_LOG("Message reçu du serveur: %s", receiveMsg)
+	if (pollResult == 0)
+	{
+		return true;
+	}
+	else if (pollResult == -1)
+	{
+		CLT_LOG_ERROR("L'opération poll a échoué.")
+		return false;
+	}
+	else
+	{
+		if (pollFd[0].revents != 0)
+		{
+			scanf("%511s", data);
+			send(clt->socketHandle, data, strlen(data) + 1, 0);
+		}
+
+		if (pollFd[1].revents != 0)
+		{
+			if (pollFd[1].revents & (POLLERR | POLLHUP))
+			{
+				return false;
+			}
+
+			dataSize = recv(clt->socketHandle, data, sizeof(data), 0);
+			CLT_LOG("Message reçu du serveur: %s", data)
+		}
+
+		return true;
+	}
 }
 
 void clt_close(clt_handle handle)
