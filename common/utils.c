@@ -1,5 +1,30 @@
 #include "common/utils.h"
 
+char *crlf_remove(char *line_with_crlf)
+{
+	char *ptr = line_with_crlf;
+
+	while (*ptr != '\r' && *ptr != '\0')
+	{
+		if (*(ptr + 1) == '\n')
+		{
+			break;
+		}
+
+		ptr++;
+	}
+
+	if (ptr[0] != '\r' || ptr[1] != '\n')
+	{
+		return 0;
+	}
+
+	ptr[0] = '\0';
+	ptr[1] = '\0';
+
+	return line_with_crlf;
+}
+
 char *crlf_to_lf(char *line_with_crlf)
 {
 	char *ptr = line_with_crlf;

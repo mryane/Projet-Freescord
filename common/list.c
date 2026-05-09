@@ -186,6 +186,23 @@ void *list_get(const struct list *l, size_t i)
 	return curr->elt;
 }
 
+int list_contains(const struct list *l, void* elt)
+{
+	const struct node *curr = l->first;
+
+	while (curr != NULL)
+	{
+		if (curr->elt == elt)
+		{
+			return 1;
+		}
+
+		curr = curr->next;
+	}
+
+	return 0;
+}
+
 void *list_remove_node(struct list *l, struct node *n)
 {
 	if (n == NULL)

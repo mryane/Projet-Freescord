@@ -45,7 +45,7 @@ void buff_fill(buffer *b)
 		return;
 	}
 
-	if (b->bufferOffset == b->lastReadSize)
+	if (b->bufferOffset >= b->lastReadSize)
 	{
 		b->lastReadSize = read(b->fd, b->bufferData, b->bufferSize);
 
@@ -107,7 +107,7 @@ int buff_ready(const buffer *b)
 		return 0;
 	}
 
-	return b->bufferOffset < b->bufferSize;
+	return b->bufferOffset < b->lastReadSize;
 }
 
 char *buff_fgets(buffer *b, char *dest, size_t size)

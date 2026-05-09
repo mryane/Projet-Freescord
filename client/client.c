@@ -1,5 +1,7 @@
 #include "client/client.h"
 #include "client/Log.h"
+#include "common/buffer.h"
+#include "common/utils.h"
 #include "common/commonDef.h"
 
 #include <stdio.h>
@@ -20,6 +22,8 @@ typedef struct
 {
     int socketHandle;
     int clientId;
+	buffer *socketBuffer;
+	buffer *inputBuffer;
 } client;
 
 /** se connecter au serveur TCP d'adresse donnée en argument sous forme de
@@ -69,7 +73,57 @@ bool clt_init(clt_handle handle)
 		return false;
 	}
 
+	clt->socketBuffer = buff_create(clt->socketHandle, 1024);
+	clt->inputBuffer = buff_create(STDIN_FILENO, 1024);
+
 	CLT_LOG("Connection au serveur établie !")
+	return true;
+}
+
+void clt_try_skip_null_char(clt_handle handle)
+{
+	CLT_FROM_HANDLE()
+
+	if (buff_ready(clt->socketBuffer))
+	{
+		char nextChar = buff_getc(clt->socketBuffer);
+
+		if (nextChar != '\0')
+		{
+			buff_ungetc(clt->socketBuffer, nextChar);
+		}
+	}
+}
+
+bool clt_read_input(clt_handle handle)
+{
+	CLT_FROM_HANDLE()
+	char data[768];
+
+	if (buff_fgets(clt->inputBuffer, data, 512) == NULL
+	 || lf_to_crlf(data) == NULL)
+	{
+		return false;
+	}
+
+	return send(clt->socketHandle, data, strlen(data) + 1, 0) != -1;
+}
+
+bool clt_read_socket(clt_handle handle)
+{
+	CLT_FROM_HANDLE()
+	char data[768];
+
+	if (buff_fgets_crlf(clt->socketBuffer, data, 512) == NULL
+	 || crlf_to_lf(data) == NULL)
+	{
+		return false;
+	}
+
+	clt_try_skip_null_char(clt);
+	crlf_remove(data);
+
+	printf("[CLIENT] Message reçu du serveur: %s", data);
 	return true;
 }
 
@@ -77,62 +131,57 @@ bool clt_tick(clt_handle handle)
 {
 	CLT_FROM_HANDLE()
 
-	struct pollfd pollFd[2] =
+	if (buff_ready(clt->socketBuffer))
 	{
-		{
-			.fd = STDIN_FILENO,
-			.events = POLLIN,
-			.revents = 0
-		},
-		{
-			.fd = clt->socketHandle,
-			.events = POLLIN,
-			.revents = 0
-		}
-	};
-
-	char data[512];
-	int dataSize;
-	int pollResult = poll(pollFd, 2, 50);
-	int i;
-
-	if (pollResult == 0)
-	{
-		return true;
+		return clt_read_socket(clt);
 	}
-	else if (pollResult == -1)
+	else if (buff_ready(clt->inputBuffer))
 	{
-		CLT_LOG_ERROR("L'opération poll a échoué.")
-		return false;
+		return clt_read_input(clt);
 	}
 	else
 	{
-		if (pollFd[0].revents != 0)
-		{
-			scanf("%511s", data);
-			send(clt->socketHandle, data, strlen(data) + 1, 0);
-		}
+		struct pollfd pollFd[2];
+		
+		pollFd[0].fd = STDIN_FILENO;
+		pollFd[0].events = POLLIN;
+		pollFd[0].revents = 0;
 
-		if (pollFd[1].revents != 0)
+		pollFd[1].fd = clt->socketHandle;
+		pollFd[1].events = POLLIN;
+		pollFd[1].revents = 0;
+
+		int pollResult = poll(pollFd, 2, -1);
+
+		if (pollResult == -1)
 		{
-			if (pollFd[1].revents & (POLLERR | POLLHUP))
+			CLT_LOG_ERROR("L'opération poll a échoué.")
+			return false;
+		}
+		else
+		{
+			if (pollFd[0].revents != 0)
 			{
-				return false;
+				return clt_read_input(clt);
 			}
 
-			dataSize = recv(clt->socketHandle, data, sizeof(data), 0);
-			CLT_LOG("Message reçu du serveur: %s", data)
-		}
+			if (pollFd[1].revents != 0)
+			{
+				return clt_read_socket(clt);
+			}
 
-		return true;
+			__builtin_unreachable();
+			return false;
+		}
 	}
 }
 
 void clt_close(clt_handle handle)
 {
 	CLT_FROM_HANDLE()
-
 	CLT_LOG("Fermeture de la connection.")
+
+	buff_free(clt->socketBuffer);
 	close(clt->socketHandle);
 }
 

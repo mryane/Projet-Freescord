@@ -117,6 +117,9 @@ struct node *list_get_next_node(const struct node *curr);
 /** return the i-th element of list l, with 0 <= i < length(l) */
 void *list_get(const struct list *l, size_t i);
 
+/** returns 1 if elt is in l, 0 otherwise */
+int list_contains(const struct list *l, void* elt);
+
 /** remove the last element of the list
  * return the element which was removed, or NULL if there is no such one */
 void *list_remove(struct list *l);

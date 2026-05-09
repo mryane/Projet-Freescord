@@ -9,6 +9,7 @@
             "request": "launch",
             "name": "Client",
             "program": "${workspaceFolder}/build/Client.elf",
+            "console": "integratedTerminal",
             "args": [],
             "env": [],
             "cwd": "${workspaceFolder}"
@@ -18,6 +19,7 @@
             "request": "launch",
             "name": "Server",
             "program": "${workspaceFolder}/build/Server.elf",
+            "console": "integratedTerminal",
             "args": [],
             "env": [],
             "cwd": "${workspaceFolder}"

@@ -32,6 +32,7 @@ typedef struct
 	pthread_t repeatThread;
 	pthread_mutex_t userListMutex;
 	struct list *userList;
+	_Atomic bool isClosing;
 } server;
 
 srv_handle srv_alloc()
@@ -45,12 +46,15 @@ bool srv_init(srv_handle handle)
 
 	srv->socketHandle = create_listening_sock(SRV_PORT);
 	srv->userList = list_create();
+	srv->isClosing = false;
 
 	if (srv->socketHandle == -1 || pipe(srv->pipeHandles))
 	{
 		SRV_LOG("L'initialisation du serveur a échoué.")
 		return false;
 	}
+
+	SRV_LOG("Pipe Handles = [%d, %d]", srv->pipeHandles[0], srv->pipeHandles[1])
 
 	pthread_mutex_init(&srv->userListMutex, NULL);
 	pthread_create(&srv->repeatThread, NULL, srv_repeat, srv);
@@ -59,11 +63,42 @@ bool srv_init(srv_handle handle)
 	return true;
 }
 
+int srv_get_socket(srv_handle handle)
+{
+	SRV_FROM_HANDLE()
+	return srv->socketHandle;
+}
+
+int srv_get_write_pipe(srv_handle handle)
+{
+	SRV_FROM_HANDLE()
+	return srv->pipeHandles[1];
+}
+
+void srv_remove_user(srv_handle handle, struct user_t *u)
+{
+	SRV_FROM_HANDLE()
+
+	if (srv->isClosing)
+	{
+		return;
+	}
+
+	pthread_mutex_lock(&srv->userListMutex);
+	{
+		if (list_contains(srv->userList, u))
+		{
+			list_remove_element(srv->userList, u);
+		}
+	}
+	pthread_mutex_unlock(&srv->userListMutex);
+}
+
 void srv_tick(srv_handle handle)
 {
 	SRV_FROM_HANDLE()
 
-	user *newUser = user_accept(srv->socketHandle, srv->pipeHandles[1]);
+	user *newUser = user_accept(srv);
 
 	if (newUser == NULL)
 	{
@@ -118,6 +153,8 @@ void* srv_repeat(srv_handle handle)
 void srv_close(srv_handle handle)
 {
 	SRV_FROM_HANDLE()
+
+	srv->isClosing = true;
 
 	if (srv->socketHandle != -1)
 	{

@@ -10,15 +10,15 @@
 #include <stdbool.h>
 #include <string.h>
 
-user *user_accept(int serverSocketHandle, int writePipeHandle)
+user *user_accept(srv_handle serverHandle)
 {
     user *newUser;
     user tmpUser;
 
     tmpUser.addrLength = sizeof(tmpUser.addr);
-	tmpUser.pipeHandle = writePipeHandle;
+	tmpUser.serverHandle = serverHandle;
     tmpUser.socketHandle = accept(
-		serverSocketHandle,
+		srv_get_socket(serverHandle),
 		(struct sockaddr*) &tmpUser.addr,
 		(socklen_t*) &tmpUser.addrLength);
 	
@@ -55,9 +55,10 @@ void user_handle(user *u)
 			break;
 		}
 
-		write(u->pipeHandle, receiveBuffer, numReceivedBytes);
+		write(srv_get_write_pipe(u->serverHandle), receiveBuffer, numReceivedBytes);
 	}
 
+	srv_remove_user(u->serverHandle, u);
 	user_free(u);
 	SRV_LOG("Connection avec le client fermé.")
 }
