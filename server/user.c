@@ -16,6 +16,7 @@ user *user_accept(int serverSocketHandle, int writePipeHandle)
     user tmpUser;
 
     tmpUser.addrLength = sizeof(tmpUser.addr);
+	tmpUser.pipeHandle = writePipeHandle;
     tmpUser.socketHandle = accept(
 		serverSocketHandle,
 		(struct sockaddr*) &tmpUser.addr,
@@ -54,9 +55,7 @@ void user_handle(user *u)
 			break;
 		}
 
-		
-
-		send(u->socketHandle, receiveBuffer, numReceivedBytes, 0);
+		write(u->pipeHandle, receiveBuffer, numReceivedBytes);
 	}
 
 	user_free(u);

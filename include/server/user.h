@@ -7,6 +7,7 @@
 typedef struct 
 {
 	int socketHandle;
+	int pipeHandle;
 	socklen_t addrLength;
 
 	/* Pourquoi alloué dynamiquement ? C'est inutile. */
