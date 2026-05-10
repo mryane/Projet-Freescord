@@ -2,24 +2,17 @@
 
 #include <stdlib.h>
 
-clt_handle gClient;
-
 int main(int numArgs, const char **args)
 {
-    gClient = clt_alloc();
-    if (! clt_init(gClient))
+    clt_handle myClient = clt_alloc();
+
+    if (! clt_init(myClient))
     {
         return EXIT_FAILURE;
     }
 
-    while (true)
-    {
-        if (!clt_tick(gClient))
-        {
-            break;
-        }
-    }
+    clt_run(myClient);
+    clt_close(myClient);
 
-    clt_close(gClient);
 	return EXIT_SUCCESS;
 }

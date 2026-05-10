@@ -2,22 +2,20 @@
 
 #include <stdlib.h>
 
-srv_handle gServer = SRV_NULL_HANDLE;
-
 int main(int numArgs, const char **args)
 {
-    gServer = srv_alloc();
+    srv_handle myServer = srv_alloc();
     
-    if (!srv_init(gServer))
+    if (!srv_init(myServer))
     {
         return EXIT_FAILURE;
     }
 
     while (true)
     {
-        srv_tick(gServer);
+        srv_tick(myServer);
     }
 
-    srv_close(gServer);
+    srv_close(myServer);
 	return EXIT_SUCCESS;
 }

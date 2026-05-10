@@ -26,11 +26,10 @@ typedef struct
 	buffer *inputBuffer;
 } client;
 
-/** se connecter au serveur TCP d'adresse donnée en argument sous forme de
- * chaîne de caractère et au port donné en argument
- * retourne le descripteur de fichier de la socket obtenue ou -1 en cas
- * d'erreur. */
-int connect_server_tcp(char *adresse, uint16_t port);
+clt_handle clt_alloc()
+{
+	return malloc(sizeof(client));
+}
 
 bool clt_try_parse_ipv4_address(const char *stringAddr, unsigned int *outAddr)
 {
@@ -55,28 +54,18 @@ bool clt_try_parse_ipv4_address(const char *stringAddr, unsigned int *outAddr)
 	return true;
 }
 
-clt_handle clt_alloc()
+bool clt_check_empty_line(const char *line)
 {
-	return malloc(sizeof(client));
-}
-
-bool clt_init(clt_handle handle)
-{
-	CLT_FROM_HANDLE()
-
-	clt->clientId = -1;
-	clt->socketHandle = connect_server_tcp("192.168.1.180", SRV_PORT);
-
-	if (clt->socketHandle == -1)
+	while (*line != '\n' && *line != '\0')
 	{
-		CLT_LOG("La création du client a echoué.")
-		return false;
+		if (*line != ' ' && *line != '\t' && *line != '\r')
+		{
+			return false;
+		}
+
+		line++;
 	}
 
-	clt->socketBuffer = buff_create(clt->socketHandle, 1024);
-	clt->inputBuffer = buff_create(STDIN_FILENO, 1024);
-
-	CLT_LOG("Connection au serveur établie !")
 	return true;
 }
 
@@ -95,51 +84,170 @@ void clt_try_skip_null_char(clt_handle handle)
 	}
 }
 
-bool clt_read_input(clt_handle handle)
+bool clt_read_input(clt_handle handle, char *data, int n)
 {
 	CLT_FROM_HANDLE()
-	char data[768];
 
-	if (buff_fgets(clt->inputBuffer, data, 512) == NULL
-	 || lf_to_crlf(data) == NULL)
+	if (buff_fgets(clt->inputBuffer, data, n) == NULL)
 	{
+		CLT_LOG("Erreur lors de la lecture de l'entrée.")
 		return false;
 	}
 
-	return send(clt->socketHandle, data, strlen(data) + 1, 0) != -1;
+	if (lf_to_crlf(data) == NULL)
+	{
+		CLT_LOG("Erreur lors de la conversion de lf à crlf de l'entrée, probablement dû à une entrée trop longue.")
+		return false;
+	}
+
+	return true;
 }
 
-bool clt_read_socket(clt_handle handle)
+bool clt_read_socket(clt_handle handle, char *data, int n)
 {
 	CLT_FROM_HANDLE()
-	char data[768];
 
-	if (buff_fgets_crlf(clt->socketBuffer, data, 512) == NULL
-	 || crlf_to_lf(data) == NULL)
+	if (buff_fgets_crlf(clt->socketBuffer, data, n) == NULL)
 	{
+		CLT_LOG("Erreur lors de la lecture des données du serveur.")
+	}
+
+	if (crlf_to_lf(data) == NULL)
+	{
+		CLT_LOG("ATTENTION! Données invalides provenant du serveur!"
+			" Il vous est fortement conseiller de ne plus vous y connecter!")
 		return false;
 	}
 
 	clt_try_skip_null_char(clt);
 	crlf_remove(data);
 
-	printf("[CLIENT] Message reçu du serveur: %s", data);
 	return true;
 }
 
-bool clt_tick(clt_handle handle)
+bool clt_init(clt_handle handle)
 {
 	CLT_FROM_HANDLE()
 
-	if (buff_ready(clt->socketBuffer))
+	clt->clientId = -1;
+	clt->socketHandle = clt_connect_to_server("192.168.1.180", SRV_PORT);
+
+	if (clt->socketHandle == -1)
 	{
-		return clt_read_socket(clt);
+		CLT_LOG("La création du client a echoué.")
+		return false;
 	}
-	else if (buff_ready(clt->inputBuffer))
+
+	clt->socketBuffer = buff_create(clt->socketHandle, 1024);
+	clt->inputBuffer = buff_create(STDIN_FILENO, 1024);
+
+	CLT_LOG("Connection au serveur établie !")
+	return true;
+}
+
+bool clt_receive_welcome_msg(clt_handle handle)
+{
+	CLT_FROM_HANDLE()
+
+	char welcomeMsg[512];
+
+	while (true)
 	{
-		return clt_read_input(clt);
+		if (! clt_read_socket(clt, welcomeMsg, sizeof(welcomeMsg)))
+		{
+			return false;
+		}
+
+		if (clt_check_empty_line(welcomeMsg))
+		{
+			return true;
+		}
+
+		printf("%s", welcomeMsg);
 	}
-	else
+}
+
+bool clt_login(clt_handle handle)
+{
+	CLT_FROM_HANDLE()
+
+	char nickname[24];
+	char logCmd[64];
+	char serverAnswer[64];
+	int answerCode;
+
+	while (true)
+	{
+		printf("Entrez votre surnom (pas plus de 16 caractères, le caractère ':' est interdit): ");
+		fflush(stdout); /* On doit flush, car il n'y a pas de \n à la fin de notre printf */
+
+		if (!clt_read_input(clt, nickname, 24))
+		{
+			printf("Erreur lors de la lecture du surnom, veuillez ressayer.\n");
+			continue;
+		}
+
+		crlf_remove(nickname);
+
+		snprintf(logCmd, 63, "nickname %s\r\n", nickname);
+		send(clt->socketHandle, logCmd, strlen(logCmd) + 1, 0);
+
+		if (!clt_read_socket(clt, serverAnswer, 64)
+		 || sscanf(serverAnswer, "%d \n", &answerCode) != 1)
+		{
+			printf("Erreur lors de la lecture de la réponse du serveur, cette erreur est fatale.\n");
+			exit(EXIT_FAILURE);
+		}
+
+		switch (answerCode)
+		{
+			case 0: printf("Vous êtes connecté avec le surnom %s.\n", nickname); return true;
+			case 1: printf("Le surnom %s est déjà pris.\n", nickname); continue;
+			case 2: printf("Le surnom %s est invalide.\n", nickname); continue;
+			case 3:
+				CLT_LOG("Réponse 3 reçu du serveur, cet erreur est fatale.") exit(EXIT_FAILURE);
+			default:
+				CLT_LOG("Réponse inconnue reçu du serveur (%d), cet erreur est fatale.", answerCode) exit(EXIT_FAILURE);
+		}
+	}
+}
+
+bool clt_handle_server_msg(clt_handle handle)
+{
+	CLT_FROM_HANDLE()
+	char msg[512];
+
+	if (!clt_read_socket(clt, msg, sizeof(msg)))
+	{
+		return false;
+	}
+
+	printf("%s", msg);
+	return true;
+}
+
+bool clt_handle_input_msg(clt_handle handle)
+{
+	CLT_FROM_HANDLE()
+	char msg[512];
+
+	if (!clt_read_input(clt, msg, MAX_MSG_LENGTH))
+	{
+		return false;
+	}
+
+	return send(clt->socketHandle, msg, strlen(msg) + 1, 0) != -1;
+}
+
+bool clt_update(clt_handle handle)
+{
+	CLT_FROM_HANDLE()
+	char msg[512];
+
+	bool haveServerMsg = buff_ready(clt->socketBuffer);
+	bool haveInputMsg = buff_ready(clt->inputBuffer);
+
+	if (!haveServerMsg && !haveInputMsg)
 	{
 		struct pollfd pollFd[2];
 		
@@ -158,20 +266,49 @@ bool clt_tick(clt_handle handle)
 			CLT_LOG_ERROR("L'opération poll a échoué.")
 			return false;
 		}
-		else
+		
+		haveServerMsg = pollFd[1].revents != 0;
+		haveInputMsg = pollFd[0].revents != 0;
+	}
+
+	if (haveServerMsg)
+	{
+		if (! clt_handle_server_msg(clt))
 		{
-			if (pollFd[0].revents != 0)
-			{
-				return clt_read_input(clt);
-			}
-
-			if (pollFd[1].revents != 0)
-			{
-				return clt_read_socket(clt);
-			}
-
-			__builtin_unreachable();
 			return false;
+		}
+	}
+
+	if (haveInputMsg)
+	{
+		if (! clt_handle_input_msg(clt))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void clt_run(clt_handle handle)
+{
+	CLT_FROM_HANDLE()
+
+	if (!clt_receive_welcome_msg(clt))
+	{
+		return;
+	}
+
+	if (!clt_login(clt))
+	{
+		return;
+	}
+
+	while (true)
+	{
+		if (! clt_update(clt))
+		{
+			return;
 		}
 	}
 }
@@ -185,7 +322,7 @@ void clt_close(clt_handle handle)
 	close(clt->socketHandle);
 }
 
-int connect_server_tcp(char *address, uint16_t port)
+int clt_connect_to_server(char *address, uint16_t port)
 {
 	int clientSocketHandle;
 	unsigned int serverIp;

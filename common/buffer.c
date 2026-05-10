@@ -155,7 +155,7 @@ char *buff_fgets_crlf(buffer *b, char *dest, size_t size)
 
 	size_t i = 0;
 	char c;
-	int lastCharCr = 0;
+	int isLastCharCr = 0;
 
 	while (i < size - 1)
 	{
@@ -173,12 +173,12 @@ char *buff_fgets_crlf(buffer *b, char *dest, size_t size)
 
 		dest[i++] = c;
 
-		if ((c == '\n' && lastCharCr) || buff_eof(b))
+		if (c == '\n' && isLastCharCr)
 		{
 			break;
 		}
 
-		lastCharCr = c == '\r';
+		isLastCharCr = c == '\r';
 	}
 
 	dest[i] = '\0';

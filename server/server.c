@@ -9,19 +9,13 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <pthread.h>
 
 #define SRV_MAX_PENDING_CLIENTS 8
 #define SRV_FROM_HANDLE() server* srv = (server*) handle;
-
-/** Gérer toutes les communications avec le client renseigné dans
- * user, qui doit être l'adresse d'une struct user */
-void *handle_client(void *user);
-/** Créer et configurer une socket d'écoute sur le port donné en argument
- * retourne le descripteur de cette socket, ou -1 en cas d'erreur */
-int create_listening_sock(uint16_t port);
 
 void* srv_repeat(srv_handle handle);
 
@@ -44,7 +38,7 @@ bool srv_init(srv_handle handle)
 {
 	SRV_FROM_HANDLE()
 
-	srv->socketHandle = create_listening_sock(SRV_PORT);
+	srv->socketHandle = srv_create_listening_sock(SRV_PORT);
 	srv->userList = list_create();
 	srv->isClosing = false;
 
@@ -53,8 +47,6 @@ bool srv_init(srv_handle handle)
 		SRV_LOG("L'initialisation du serveur a échoué.")
 		return false;
 	}
-
-	SRV_LOG("Pipe Handles = [%d, %d]", srv->pipeHandles[0], srv->pipeHandles[1])
 
 	pthread_mutex_init(&srv->userListMutex, NULL);
 	pthread_create(&srv->repeatThread, NULL, srv_repeat, srv);
@@ -73,6 +65,45 @@ int srv_get_write_pipe(srv_handle handle)
 {
 	SRV_FROM_HANDLE()
 	return srv->pipeHandles[1];
+}
+
+const char *srv_get_welcome_msg(srv_handle handle)
+{
+	SRV_FROM_HANDLE()
+
+	return
+		"Bienvenue sur le serveur Freescord!\r\n"
+		"Envoyez des messages et recevez en d'autres personnes.\r\n"
+		"Merci de respectez les règles de bienséances afin de garentir une bonne experience pour tout le monde\r\n"
+		"\r\n";
+}
+
+bool srv_check_unused_nickname(srv_handle handle, const char *nickname)
+{
+	SRV_FROM_HANDLE()
+	int count = 0;
+
+	pthread_mutex_lock(&srv->userListMutex);
+	{
+		struct node *currentNode = list_get_node(srv->userList, 0);
+
+		while (currentNode != NULL)
+		{
+			user *currentUser = (user *) currentNode->elt;
+
+			count += (int) (strcmp(nickname, currentUser->nickname) == 0);
+
+			if (count > 1)
+			{
+				break;
+			}
+
+			currentNode = list_get_next_node(currentNode);
+		}
+	}
+	pthread_mutex_unlock(&srv->userListMutex);
+
+	return count <= 1;
 }
 
 void srv_remove_user(srv_handle handle, struct user_t *u)
@@ -113,7 +144,7 @@ void srv_tick(srv_handle handle)
 
 	pthread_t userThread;
 
-	pthread_create(&userThread, NULL, handle_client, newUser);
+	pthread_create(&userThread, NULL, (void* (*)(void*)) user_handle, newUser);
 	pthread_detach(userThread);
 }
 
@@ -170,13 +201,7 @@ void srv_close(srv_handle handle)
 	list_free(srv->userList, (void (*)(void*)) user_close);
 }
 
-void *handle_client(void *clt)
-{
-	user_handle((user*) clt);
-	return NULL;
-}
-
-int create_listening_sock(uint16_t port)
+int srv_create_listening_sock(uint16_t port)
 {
 	int socketFd = socket(AF_INET, SOCK_STREAM, 0);
 
