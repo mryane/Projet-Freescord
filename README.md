@@ -22,9 +22,16 @@ Implémentation:
         Login dans le serveur puis reçois et envoie des messages au serveur,
         vérifie en premier lieu si les buffers ne sont pas vides, puis s'ils le sont,
         alors attends en utilisant poll.
+    
+    - Makefile:
+        Je tiens à préciser que je suis déjà bien familié avec les makefiles,
+        ceux figurants dans ce projets ont été intégrallement fait par moi même
+        en utilisant mes propres connaissances acquises en lisant
+        la documentation (https://www.gnu.org/software/make/manual/make.html) et avec ma propre expérience.
 
 Ressources utilisées:
     Quelques pages de manuels de différentes fonctions d'API de socket et de strings.
+    Ainsi que stackoverflow (https://stackoverflow.com/questions/60215078/c-printf-does-not-output-immediately).
 
 Aide entre étudiants:
     Vérification mutuelles et discussions sur les différents algorithmes et solutions utilisées avec Sami Aït Meddour.

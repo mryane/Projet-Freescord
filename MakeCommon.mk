@@ -1,3 +1,7 @@
+# Ryane Menaï 12409318
+# Je déclare qu'il s'agit de mon propre travail.
+# Ce travail a été réalisé intégralement par un être humain.
+
 SRC := $(shell find $(COMMON_SRC_DIR) -type f -name *.c) $(shell find $(SRC_DIR) -type f -name *.c)
 OBJ := $(addprefix $(OBJ_DIR)/,$(SRC))
 OBJ := $(patsubst %.c,%.c.o,$(OBJ))
