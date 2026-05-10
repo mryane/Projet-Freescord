@@ -134,7 +134,7 @@ bool clt_init(clt_handle handle)
 	CLT_FROM_HANDLE()
 
 	clt->clientId = -1;
-	clt->socketHandle = clt_connect_to_server("192.168.1.180", SRV_PORT);
+	clt->socketHandle = clt_connect_to_server("127.0.0.1", SRV_PORT);
 
 	if (clt->socketHandle == -1)
 	{

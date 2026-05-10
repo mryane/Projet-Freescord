@@ -23,6 +23,9 @@ Implémentation:
         vérifie en premier lieu si les buffers ne sont pas vides, puis s'ils le sont,
         alors attends en utilisant poll.
     
+    - Autre:
+        Certaines fonctions ont été ajouté à la bibliothèque list et buffer
+    
     - Makefile:
         Je tiens à préciser que je suis déjà bien familié avec les makefiles,
         ceux figurants dans ce projets ont été intégrallement fait par moi même
