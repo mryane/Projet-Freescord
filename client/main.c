@@ -1,4 +1,8 @@
-#include "client/client.h"
+/* Ryane Menaï 12409318
+ * Je déclare qu'il s'agit de mon propre travail.
+ * Ce travail a été réalisé intégralement par un être humain. */
+
+ #include "client/client.h"
 
 #include <stdlib.h>
 

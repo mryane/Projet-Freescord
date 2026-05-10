@@ -1,5 +1,10 @@
 #ifndef UTILS_H
-#define UTILS_H value
+#define UTILS_H
+
+/* Ryane Menaï 12409318
+ * Je déclare qu'il s'agit de mon propre travail.
+ * Ce travail a été réalisé intégralement par un être humain. */
+
 
 /* Remplace crlf par null char */
 char *crlf_remove(char *line_with_crlf);
@@ -15,4 +20,5 @@ char *crlf_to_lf(char *line_with_crlf);
  * un caractère supplémentaire.
  * Retourne la ligne modifiée ou NULL en cas d'erreur. */
 char *lf_to_crlf(char *line_with_lf);
+
 #endif /* ifndef UTILS_H */

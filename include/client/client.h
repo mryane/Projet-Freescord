@@ -1,4 +1,9 @@
 #pragma once
+
+/* Ryane Menaï 12409318
+ * Je déclare qu'il s'agit de mon propre travail.
+ * Ce travail a été réalisé intégralement par un être humain. */
+
 #include <stdbool.h>
 #include <inttypes.h>
 

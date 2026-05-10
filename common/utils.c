@@ -1,3 +1,7 @@
+/* Ryane Menaï 12409318
+ * Je déclare qu'il s'agit de mon propre travail.
+ * Ce travail a été réalisé intégralement par un être humain. */
+
 #include "common/utils.h"
 
 char *crlf_remove(char *line_with_crlf)
